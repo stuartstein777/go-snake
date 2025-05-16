@@ -245,8 +245,6 @@ func (g *Game) Update() error {
 			g.gameOver = true
 		} else if g.food.X == head.X && g.food.Y == head.Y { // collision with food
 			g.snake.Length++
-			//g.snake.Segments = append([]Segment{head}, g.snake.Segments...)
-			//g.snake.Segments = g.snake.Segments[:g.snake.Length]
 
 			newHead := Segment{X: head.X, Y: head.Y}
 
@@ -334,12 +332,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	// Draw the food
-	// if g.food.X != 0 && g.food.Y != 0 {
-	// 	foodX := float32(g.food.X * SegmentSize)
-	// 	foodY := float32(g.food.Y*SegmentSize) + float32(HeaderHeight) // Add the header height here
-	// 	vector.DrawFilledRect(screen, foodX, foodY, float32(SegmentSize), float32(SegmentSize), color.RGBA{255, 165, 0, 255}, false)
-	// }
 	if g.food.X != 0 && g.food.Y != 0 {
 		const foodRadius = SegmentSize / 2.5
 		cx := float32(g.food.X*SegmentSize) + float32(SegmentSize/2)
@@ -348,6 +340,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		fmt.Println("Food center coordinates:", cx, cy)
 		vector.DrawFilledCircle(screen, cx, cy, float32(foodRadius), color.RGBA{R: 255, G: 255, B: 0, A: 255}, false)
 	}
+
+	// Draw the controls
+	controls := "A - Turn Left, D - Turn Right"
+	text.Draw(screen, controls, basicfont.Face7x13, 300, 20, color.White)
 
 	// Draw the score
 	scoreText := fmt.Sprintf("Score: %d", g.score)
@@ -395,15 +391,6 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func main() {
 
-	// snake := Snake{
-	// 	Length:    3,
-	// 	Direction: "right",
-	// 	Segments:  startingSnake,
-	// }
-
-	// game := &Game{snake: snake, speed: 5, speedIncrement: 10, score: 0}
-	// game.SpawnFood()
-	// game.SpawnObstacles(5) // Spawn 5 obstacles
 	game := &Game{}
 	game.Reset()
 	ebiten.SetWindowSize(1280, 960)

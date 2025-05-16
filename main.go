@@ -375,14 +375,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			vector.DrawFilledRect(screen, x, y, float32(SegmentSize), float32(SegmentSize), color.RGBA{0, 255, 0, 255}, false)
 		}
 	}
-	head := g.snake.Segments[0]
-	vector.DrawFilledRect(screen,
-		float32(head.X*SegmentSize),
-		float32(head.Y*SegmentSize+HeaderHeight),
-		float32(SegmentSize),
-		float32(SegmentSize),
-		color.RGBA{R: 0, G: 255, B: 0, A: 128},
-		false)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {

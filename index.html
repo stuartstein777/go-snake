@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Go Snake WASM</title>
+  <script src="wasm_exec.js"></script>
+  <script>
+    const go = new Go();
+
+    WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+      go.run(result.instance);
+    });
+  </script>
+</head>
+<body>
+  <canvas id="gameCanvas" width="640" height="480"></canvas>
+</body>
+</html>

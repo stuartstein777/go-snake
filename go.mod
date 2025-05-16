@@ -1,4 +1,4 @@
-module stuartstein777.github.com/snake
+module stuartstein777.github.com/go-snake
 
 go 1.23.5
 

@@ -86,6 +86,12 @@ func (g *Game) SpawnObstacles(count int) {
 			x := g.random.Intn((ScreenWidth - 2*BorderWidth) / SegmentSize)
 			y := g.random.Intn((ScreenHeight - HeaderHeight - 2*BorderWidth) / SegmentSize)
 
+			if x < BorderWidth/SegmentSize || y < BorderWidth/SegmentSize {
+				continue
+			}
+			if x+size > (ScreenWidth-BorderWidth)/SegmentSize || y+size > (ScreenHeight-HeaderHeight-BorderWidth)/SegmentSize {
+				continue
+			}
 			// Generate the segments for the obstacle based on size
 			newObstacles := []Segment{}
 			collision := false
@@ -125,12 +131,40 @@ func (g *Game) SpawnObstacles(count int) {
 // Spawns food in a random location within the arena boundaries
 func (g *Game) SpawnFood() {
 	gridWidth := (ScreenWidth - 2*BorderWidth) / SegmentSize
-	gridHeight := (ScreenHeight - 2*BorderWidth) / SegmentSize
+	gridHeight := (ScreenHeight-2*BorderWidth)/SegmentSize - 1
+
+	x := rand.Intn(gridWidth) + BorderWidth/SegmentSize
+	y := rand.Intn(gridHeight) + BorderWidth/SegmentSize
 
 	g.food = Segment{
-		X: rand.Intn(gridWidth) + BorderWidth/SegmentSize,
-		Y: rand.Intn(gridHeight) + BorderWidth/SegmentSize,
+		X: x,
+		Y: y,
 	}
+
+	if (g.food.X <= BorderWidth) || (g.food.X >= gridWidth-BorderWidth) {
+		g.SpawnFood()
+		return
+	}
+
+	if (g.food.Y <= BorderWidth) || (g.food.Y >= gridHeight-BorderWidth) {
+		g.SpawnFood()
+		return
+	}
+	// check if the food spawns on the snake or obstacles
+	for _, segment := range g.snake.Segments {
+		if segment.X == g.food.X && segment.Y == g.food.Y {
+			g.SpawnFood()
+			return
+		}
+	}
+	for _, obstacle := range g.obstacles {
+		if obstacle.X == g.food.X && obstacle.Y == g.food.Y {
+			g.SpawnFood()
+			return
+		}
+	}
+
+	fmt.Println("Spawned food at:", g.food.X, g.food.Y)
 }
 
 func UpdateSnakeDirection(input string, snake *Snake) {
@@ -301,10 +335,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	// Draw the food
+	// if g.food.X != 0 && g.food.Y != 0 {
+	// 	foodX := float32(g.food.X * SegmentSize)
+	// 	foodY := float32(g.food.Y*SegmentSize) + float32(HeaderHeight) // Add the header height here
+	// 	vector.DrawFilledRect(screen, foodX, foodY, float32(SegmentSize), float32(SegmentSize), color.RGBA{255, 165, 0, 255}, false)
+	// }
 	if g.food.X != 0 && g.food.Y != 0 {
-		foodX := float32(g.food.X * SegmentSize)
-		foodY := float32(g.food.Y*SegmentSize) + float32(HeaderHeight) // Add the header height here
-		vector.DrawFilledRect(screen, foodX, foodY, float32(SegmentSize), float32(SegmentSize), color.RGBA{255, 165, 0, 255}, false)
+		const foodRadius = SegmentSize / 2.5
+		cx := float32(g.food.X*SegmentSize) + float32(SegmentSize/2)
+		cy := float32(g.food.Y*SegmentSize) + float32(SegmentSize/2) + HeaderHeight
+		fmt.Println("Food coordinates:", g.food.X, g.food.Y)
+		fmt.Println("Food center coordinates:", cx, cy)
+		vector.DrawFilledCircle(screen, cx, cy, float32(foodRadius), color.RGBA{R: 255, G: 255, B: 0, A: 255}, false)
 	}
 
 	// Draw the score
@@ -337,6 +379,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			vector.DrawFilledRect(screen, x, y, float32(SegmentSize), float32(SegmentSize), color.RGBA{0, 255, 0, 255}, false)
 		}
 	}
+	head := g.snake.Segments[0]
+	vector.DrawFilledRect(screen,
+		float32(head.X*SegmentSize),
+		float32(head.Y*SegmentSize+HeaderHeight),
+		float32(SegmentSize),
+		float32(SegmentSize),
+		color.RGBA{R: 0, G: 255, B: 0, A: 128},
+		false)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {

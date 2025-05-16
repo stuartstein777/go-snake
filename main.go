@@ -59,7 +59,7 @@ type Game struct {
 	food           Segment
 	score          int
 	speedIncrement int
-	highScores     []int
+	obstacles      []Segment
 }
 
 var startingSnake = []Segment{
@@ -72,6 +72,41 @@ var randomSource *rand.Rand
 
 func init() {
 	randomSource = rand.New(rand.NewSource(time.Now().UnixNano()))
+}
+
+func (g *Game) SpawnObstacles(count int) {
+	g.obstacles = []Segment{}
+	for i := 0; i < count; i++ {
+		for {
+			x := rand.Intn((ScreenWidth - 2*BorderWidth) / SegmentSize)
+			y := rand.Intn((ScreenHeight - HeaderHeight - 2*BorderWidth) / SegmentSize)
+
+			newObstacle := Segment{X: x, Y: y}
+
+			// Ensure no collisions with snake, food, or existing obstacles
+			collision := false
+			if newObstacle == g.food {
+				collision = true
+			}
+			for _, segment := range g.snake.Segments {
+				if segment == newObstacle {
+					collision = true
+					break
+				}
+			}
+			for _, obstacle := range g.obstacles {
+				if obstacle == newObstacle {
+					collision = true
+					break
+				}
+			}
+
+			if !collision {
+				g.obstacles = append(g.obstacles, newObstacle)
+				break
+			}
+		}
+	}
 }
 
 // Spawns food in a random location within the arena boundaries
@@ -185,7 +220,7 @@ func (g *Game) Update() error {
 
 			if g.score > 0 && g.score%g.speedIncrement == 0 {
 				if g.speed > 2 {
-					//g.speed--
+					g.speed--
 				}
 			}
 		} else {
@@ -193,6 +228,13 @@ func (g *Game) Update() error {
 			// Check for collision with its own body
 			for _, segment := range g.snake.Segments[1:] {
 				if head.X == segment.X && head.Y == segment.Y {
+					g.gameOver = true
+					return nil
+				}
+			}
+
+			for _, obstacle := range g.obstacles {
+				if g.snake.Segments[0] == obstacle {
 					g.gameOver = true
 					return nil
 				}
@@ -223,6 +265,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		// Define the font and color
 		face := basicfont.Face7x13
 		msg := "Game Over! Press R to Restart"
+		msgScore := fmt.Sprintf("Final Score: %d", g.score)
 		textColor := color.RGBA{255, 255, 255, 255}
 		// Measure the text width to center it
 		bounds, _ := font.BoundString(face, msg)
@@ -232,7 +275,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		// Draw the text
 		text.Draw(screen, msg, face, x, y, textColor)
-		text.Draw(screen, msg, face, x, y, textColor)
+		text.Draw(screen, msgScore, face, x, y+30, textColor)
 		return
 	}
 
@@ -250,6 +293,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// Draw the speed
 	speedText := fmt.Sprintf("Speed: %d", g.speed)
 	text.Draw(screen, speedText, basicfont.Face7x13, 200, 20, color.RGBA{255, 255, 255, 255})
+
+	// Draw the obstacles
+	for _, obstacle := range g.obstacles {
+		vector.DrawFilledRect(screen,
+			float32(obstacle.X*SegmentSize),
+			float32(obstacle.Y*SegmentSize+HeaderHeight),
+			float32(SegmentSize),
+			float32(SegmentSize),
+			color.RGBA{108, 122, 137, 255}, false) // Red colored obstacles
+	}
 
 	// Draw the snake
 	for _, segment := range g.snake.Segments {
@@ -278,6 +331,7 @@ func main() {
 
 	game := &Game{snake: snake, speed: 5, speedIncrement: 10, score: 0}
 	game.SpawnFood()
+	game.SpawnObstacles(5) // Spawn 5 obstacles
 	ebiten.SetWindowSize(1280, 960)
 	ebiten.SetWindowTitle("Snake")
 	if err := ebiten.RunGame(game); err != nil {

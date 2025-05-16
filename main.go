@@ -60,6 +60,7 @@ type Game struct {
 	score          int
 	speedIncrement int
 	obstacles      []Segment
+	random         *rand.Rand
 }
 
 var startingSnake = []Segment{
@@ -68,41 +69,53 @@ var startingSnake = []Segment{
 	{X: 3, Y: 5},
 }
 
-var randomSource *rand.Rand
-
-func init() {
-	randomSource = rand.New(rand.NewSource(time.Now().UnixNano()))
-}
-
 func (g *Game) SpawnObstacles(count int) {
 	g.obstacles = []Segment{}
+
 	for i := 0; i < count; i++ {
+		// Randomly choose the size of the obstacle (1x1, 2x2, or 3x3)
+		size := 1
+		randomSize := rand.Float32()
+		if randomSize > 0.7 {
+			size = 2
+		} else if randomSize > 0.4 {
+			size = 3
+		}
+
 		for {
-			x := rand.Intn((ScreenWidth - 2*BorderWidth) / SegmentSize)
-			y := rand.Intn((ScreenHeight - HeaderHeight - 2*BorderWidth) / SegmentSize)
+			x := g.random.Intn((ScreenWidth - 2*BorderWidth) / SegmentSize)
+			y := g.random.Intn((ScreenHeight - HeaderHeight - 2*BorderWidth) / SegmentSize)
 
-			newObstacle := Segment{X: x, Y: y}
-
-			// Ensure no collisions with snake, food, or existing obstacles
+			// Generate the segments for the obstacle based on size
+			newObstacles := []Segment{}
 			collision := false
-			if newObstacle == g.food {
-				collision = true
-			}
-			for _, segment := range g.snake.Segments {
-				if segment == newObstacle {
-					collision = true
-					break
-				}
-			}
-			for _, obstacle := range g.obstacles {
-				if obstacle == newObstacle {
-					collision = true
-					break
+
+			for dx := 0; dx < size; dx++ {
+				for dy := 0; dy < size; dy++ {
+					newSegment := Segment{X: x + dx, Y: y + dy}
+					newObstacles = append(newObstacles, newSegment)
+
+					// Check for collision with the snake, food, or other obstacles
+					if newSegment == g.food {
+						collision = true
+					}
+					for _, segment := range g.snake.Segments {
+						if segment == newSegment {
+							collision = true
+							break
+						}
+					}
+					for _, obstacle := range g.obstacles {
+						if obstacle == newSegment {
+							collision = true
+							break
+						}
+					}
 				}
 			}
 
 			if !collision {
-				g.obstacles = append(g.obstacles, newObstacle)
+				g.obstacles = append(g.obstacles, newObstacles...)
 				break
 			}
 		}
@@ -156,18 +169,26 @@ func MoveSnake(snake *Snake) {
 	snake.Segments = append([]Segment{head}, snake.Segments[:snake.Length-1]...)
 }
 
+func (g *Game) Reset() {
+	g.random = rand.New(rand.NewSource(time.Now().UnixNano()))
+	g.snake.Segments = startingSnake
+	g.snake.Direction = "right"
+	g.snake.Length = 3
+	g.frameCount = 0
+	g.score = 0
+	g.gameOver = false
+	g.speed = 5
+	g.speedIncrement = 10
+
+	g.SpawnFood()
+	g.SpawnObstacles(10)
+}
+
 func (g *Game) Update() error {
 
 	// Handle restart from game over
 	if g.gameOver && inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		g.snake.Segments = startingSnake
-		g.snake.Direction = "right"
-		g.snake.Length = 3
-		g.frameCount = 0
-		g.score = 0
-		g.gameOver = false
-		g.speed = 5
-		g.speedIncrement = 10
+		g.Reset()
 	}
 
 	g.frameCount++
@@ -323,15 +344,18 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func main() {
-	snake := Snake{
-		Length:    3,
-		Direction: "right",
-		Segments:  startingSnake,
-	}
 
-	game := &Game{snake: snake, speed: 5, speedIncrement: 10, score: 0}
-	game.SpawnFood()
-	game.SpawnObstacles(5) // Spawn 5 obstacles
+	// snake := Snake{
+	// 	Length:    3,
+	// 	Direction: "right",
+	// 	Segments:  startingSnake,
+	// }
+
+	// game := &Game{snake: snake, speed: 5, speedIncrement: 10, score: 0}
+	// game.SpawnFood()
+	// game.SpawnObstacles(5) // Spawn 5 obstacles
+	game := &Game{}
+	game.Reset()
 	ebiten.SetWindowSize(1280, 960)
 	ebiten.SetWindowTitle("Snake")
 	if err := ebiten.RunGame(game); err != nil {
